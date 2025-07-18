@@ -8,11 +8,11 @@ interface VisitorEvent {
     metadata?: any;
 }
 
-interface AnalyticsStats {
-    totalActive: number;
-    totalToday: number;
-    pagesVisited: { [key: string]: number };
-}
+// interface AnalyticsStats {
+//     totalActive: number;
+//     totalToday: number;
+//     pagesVisited: { [key: string]: number };
+// }
 
 interface SessionData {
     sessionId: string;
