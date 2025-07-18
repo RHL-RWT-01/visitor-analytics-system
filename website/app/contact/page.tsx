@@ -1,14 +1,12 @@
 'use client';
 import { sendEvent } from '@/utils/eventSender';
 import Head from 'next/head';
-import { useState, useEffect } from 'react';  
+import { useState } from 'react';  
 
 export default function ContactPage() {
     const [formData, setFormData] = useState({ name: '', email: '', message: '' });
 
-    useEffect(() => {
-        sendEvent('pageview', '/contact');
-    }, []);
+    
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });

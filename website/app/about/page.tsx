@@ -1,14 +1,9 @@
 "use client";
 
-import { sendEvent } from '@/utils/eventSender';
 import Head from 'next/head';
 import Link from 'next/link';
-import { useEffect } from 'react'; 
 
 const AboutPage: React.FC = () => {
-  useEffect(() => {
-    sendEvent('pageview', '/about');
-  }, []); 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center p-4">
       <Head>

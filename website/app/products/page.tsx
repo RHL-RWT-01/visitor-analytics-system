@@ -1,7 +1,6 @@
 "use client";
 import { sendEvent } from '@/utils/eventSender';
 import Head from 'next/head';
-import { useEffect } from 'react';
 
 type Product = {
     id: number;
@@ -17,9 +16,7 @@ const products: Product[] = [
 ];
 
 export default function ProductsPage() {
-    useEffect(() => {
-        sendEvent('pageview', '/products');
-    }, []);
+
 
     const handleProductClick = (product: Product) => {
 
@@ -29,7 +26,6 @@ export default function ProductsPage() {
             productName: product.name,
             productPrice: product.price
         });
-        alert(`You clicked on ${product.name}! Event sent to analytics.`);
     };
 
     return (
