@@ -63,7 +63,6 @@ wss.on('connection', ws => {
                     }
                 }));
             } else if (parsedMessage.type === 'track_dashboard_action') {
-                // Track dashboard action (optional implementation)
             }
         } catch (error) {
             console.error('Failed to parse WebSocket message:', error);
@@ -85,6 +84,12 @@ wss.on('connection', ws => {
         console.error('WebSocket error:', error);
     });
 });
+
+
+
+app.get('/', (req, res) => {
+    res.send('Visitor Analytics System API is running...');
+})
 
 app.post('/api/events', (req, res) => {
     const event = req.body;
