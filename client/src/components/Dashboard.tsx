@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+
 interface VisitorEvent {
     type: string;
     page?: string;
@@ -7,12 +8,6 @@ interface VisitorEvent {
     country?: string;
     metadata?: any;
 }
-
-// interface AnalyticsStats {
-//     totalActive: number;
-//     totalToday: number;
-//     pagesVisited: { [key: string]: number };
-// }
 
 interface SessionData {
     sessionId: string;
@@ -41,16 +36,13 @@ const Dashboard: React.FC = () => {
 
     const connectWebSocket = () => {
         if (ws.current && (ws.current.readyState === WebSocket.OPEN || ws.current.readyState === WebSocket.CONNECTING)) {
-            console.log("WebSocket is already open or connecting.");
             return;
         }
 
         ws.current = new WebSocket(WS_URL);
         setConnectionStatus('reconnecting');
-        console.log('Attempting to connect to WebSocket...');
 
         ws.current.onopen = () => {
-            console.log('WebSocket connected!');
             setConnectionStatus('connected');
             if (reconnectInterval.current) {
                 clearInterval(reconnectInterval.current);
@@ -60,14 +52,13 @@ const Dashboard: React.FC = () => {
 
         ws.current.onmessage = (event) => {
             const message: WebSocketMessage = JSON.parse(event.data);
-            console.log('Message from server:', message);
 
             switch (message.type) {
                 case 'visitor_update':
                     setActiveVisitors(message.data.stats.totalActive);
                     setTotalVisitorsToday(message.data.stats.totalToday);
                     setPagesVisited(message.data.stats.pagesVisited);
-                    setVisitorFeed(prev => [message.data.event, ...prev].slice(0, 50)); // Limit feed to 50
+                    setVisitorFeed(prev => [message.data.event, ...prev].slice(0, 50));
                     break;
                 case 'user_connected':
                 case 'user_disconnected':
@@ -80,37 +71,41 @@ const Dashboard: React.FC = () => {
                         return newMap;
                     });
                     break;
-                case 'alert':
-                    alert(`Alert (${message.data.level}): ${message.data.message}`);
+                case 'detailed_stats_response': {
+                    const newSessionMap = new Map<string, SessionData>();
+                    for (const session of message.data.sessions || []) {
+                        newSessionMap.set(session.sessionId, {
+                            sessionId: session.sessionId,
+                            currentPage: session.currentPage,
+                            journey: session.journey,
+                            duration: session.duration
+                        });
+                    }
+                    setActiveSessions(newSessionMap);
+                    setPagesVisited(message.data.pagesVisited || {});
                     break;
-                case 'detailed_stats_response':
-                    console.log('Detailed stats response:', message.data);
-                    break;
+                }
                 default:
-                    console.warn('Unknown message type:', message.type);
+                    break;
             }
         };
 
         ws.current.onclose = () => {
-            console.log('WebSocket disconnected.');
             setConnectionStatus('disconnected');
             if (!reconnectInterval.current) {
-                reconnectInterval.current = setInterval(connectWebSocket, 3000); // Reconnect every 3 seconds
+                reconnectInterval.current = setInterval(connectWebSocket, 3000);
             }
         };
 
-        ws.current.onerror = (error) => {
-            console.error('WebSocket error:', error);
+        ws.current.onerror = () => {
             setConnectionStatus('disconnected');
-            ws.current?.close(); 
+            ws.current?.close();
         };
     };
 
     useEffect(() => {
         connectWebSocket();
 
-
-        // cleanup
         return () => {
             if (ws.current) {
                 ws.current.close();
@@ -139,28 +134,22 @@ const Dashboard: React.FC = () => {
                 action: 'filter_applied',
                 details: { filterType: Object.keys(filter).join(', '), value: Object.values(filter).join(', ') }
             }));
-            console.log('Sent request_detailed_stats and track_dashboard_action');
-        } else {
-            console.warn('WebSocket not connected. Cannot apply filter.');
         }
     };
 
     const handleResetStats = () => {
-        if (confirm('Are you sure you want to clear client-side statistics display? This does NOT affect server stats.')) {
-            setActiveVisitors(0);
-            setTotalVisitorsToday(0);
-            setPagesVisited({});
-            setVisitorFeed([]);
-            setActiveSessions(new Map());
-            setConnectedDashboardsCount(1);
-            console.log('Client-side stats cleared.');
-        }
+        setActiveVisitors(0);
+        setTotalVisitorsToday(0);
+        setPagesVisited({});
+        setVisitorFeed([]);
+        setActiveSessions(new Map());
+        setConnectedDashboardsCount(1);
     };
 
     const toggleSessionJourney = (sessionId: string) => {
         const element = document.getElementById(`session-journey-${sessionId}`);
         if (element) {
-            element.classList.toggle('hidden'); 
+            element.classList.toggle('hidden');
         }
     };
 
@@ -272,7 +261,7 @@ const Dashboard: React.FC = () => {
                             onClick={handleResetStats}
                             className="bg-red-500 hover:bg-red-600 text-gray-900 py-2 px-5 rounded-md text-base transition-colors duration-200 flex-grow sm:flex-grow-0"
                         >
-                            Clear/Reset Statistics 
+                            Clear/Reset Statistics
                         </button>
                     </div>
                 </div>

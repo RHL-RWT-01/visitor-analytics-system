@@ -30,6 +30,7 @@ function broadcast(message) {
 
 wss.on('connection', ws => {
     connectedDashboards++;
+    console.log(`Dashboard connected. Total dashboards: ${connectedDashboards}`);
 
     ws.send(JSON.stringify({
         type: 'user_connected',
@@ -53,16 +54,46 @@ wss.on('connection', ws => {
     ws.on('message', message => {
         try {
             const parsedMessage = JSON.parse(message);
+            console.log('Received WebSocket message:', parsedMessage);
 
             if (parsedMessage.type === 'request_detailed_stats') {
+                const { page, country } = parsedMessage.filter || {};
+
+                let filteredSessions = Array.from(analytics.activeSessions.entries())
+                    .map(([sessionId, sessionData]) => ({
+                        sessionId,
+                        ...sessionData
+                    }))
+                    .filter(session => session.isActive);
+
+                if (page) {
+                    filteredSessions = filteredSessions.filter(session =>
+                        session.currentPage.toLowerCase() === page.toLowerCase() ||
+                        session.journey.some(p => p.toLowerCase() === page.toLowerCase())
+                    );
+                }
+
+                if (country) {
+                    filteredSessions = filteredSessions.filter(session =>
+                        session.country && session.country.toLowerCase() === country.toLowerCase()
+                    );
+                }
+
+                const filteredPages = page
+                    ? { [page]: analytics.pagesVisited[page] || 0 }
+                    : analytics.pagesVisited;
+
                 ws.send(JSON.stringify({
                     type: 'detailed_stats_response',
                     data: {
-                        message: 'Server received request for detailed stats.',
-                        filter: parsedMessage.filter
+                        filter: parsedMessage.filter,
+                        sessions: filteredSessions,
+                        pagesVisited: filteredPages
                     }
                 }));
-            } else if (parsedMessage.type === 'track_dashboard_action') {
+            }
+            else if (parsedMessage.type === 'track_dashboard_action') {
+                console.log('Dashboard action tracked:', parsedMessage.action, parsedMessage.details);
             }
         } catch (error) {
             console.error('Failed to parse WebSocket message:', error);
@@ -71,6 +102,7 @@ wss.on('connection', ws => {
 
     ws.on('close', () => {
         connectedDashboards--;
+        console.log(`Dashboard disconnected. Total dashboards: ${connectedDashboards}`);
 
         broadcast({
             type: 'user_disconnected',
@@ -85,14 +117,13 @@ wss.on('connection', ws => {
     });
 });
 
-
-
 app.get('/', (req, res) => {
     res.send('Visitor Analytics System API is running...');
-})
+});
 
 app.post('/api/events', (req, res) => {
     const event = req.body;
+    console.log('Received event:', event);
 
     if (!event || !event.type || !event.sessionId || !event.timestamp) {
         return res.status(400).json({ error: 'Missing required event fields (type, sessionId, timestamp)' });
@@ -108,25 +139,29 @@ app.post('/api/events', (req, res) => {
             currentPage: '',
             duration: 0,
             lastActivity: new Date(event.timestamp),
-            isActive: true
+            isActive: true,
+            country: event.country || 'Unknown'
         };
         analytics.activeSessions.set(event.sessionId, session);
         analytics.totalActiveVisitors++;
+        console.log(`New session created: ${event.sessionId}, Active visitors: ${analytics.totalActiveVisitors}`);
+    } else {
+        const timeDiff = (new Date(event.timestamp).getTime() - session.lastActivity.getTime()) / 1000;
+        if (!isNaN(timeDiff) && timeDiff >= 0 && event.type !== 'session_end') {
+            session.duration += timeDiff;
+        }
     }
 
     if (event.type === 'pageview') {
-        if (session.currentPage !== event.page && event.page) {
+        if (event.page && session.currentPage.toLowerCase() !== event.page.toLowerCase()) {
             session.journey.push(event.page);
         }
         session.currentPage = event.page || session.currentPage;
-
-        const timeDiff = (new Date(event.timestamp).getTime() - session.lastActivity.getTime()) / 1000;
-        if (!isNaN(timeDiff) && timeDiff >= 0) {
-            session.duration += timeDiff;
-        }
+        console.log(`Session ${event.sessionId} pageview: ${session.currentPage}`);
     } else if (event.type === 'session_end') {
         session.isActive = false;
         analytics.totalActiveVisitors--;
+        console.log(`Session ended: ${event.sessionId}, Active visitors: ${analytics.totalActiveVisitors}`);
     }
 
     session.lastActivity = new Date(event.timestamp);
@@ -154,7 +189,8 @@ app.post('/api/events', (req, res) => {
                 sessionId: event.sessionId,
                 currentPage: session.currentPage,
                 journey: session.journey,
-                duration: Math.round(session.duration)
+                duration: Math.round(session.duration),
+                country: session.country
             }
         });
     }

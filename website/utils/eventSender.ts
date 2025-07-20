@@ -2,15 +2,16 @@ let lastPageViewPath: string | null = null;
 let pageviewTimeout: NodeJS.Timeout | null = null;
 const PAGEVIEW_DEBOUNCE_DELAY = 100;
 
+
 const getSessionId = (): string => {
   let sessionId = localStorage.getItem("sessionId");
-  if (!sessionId) {
+  if (!sessionId)
     sessionId = `user-${Math.random()
       .toString(36)
       .substring(2, 11)}-${Date.now()}`;
-    localStorage.setItem("sessionId", sessionId);
-    console.log(`Generated new sessionId: ${sessionId}`);
-  }
+  localStorage.setItem("sessionId", sessionId);
+  console.log(`Generated new sessionId: ${sessionId}`);
+
   return sessionId;
 };
 

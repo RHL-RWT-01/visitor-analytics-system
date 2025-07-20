@@ -1,12 +1,12 @@
 'use client';
 import { sendEvent } from '@/utils/eventSender';
 import Head from 'next/head';
-import { useState } from 'react';  
+import { useState } from 'react';
 
 export default function ContactPage() {
     const [formData, setFormData] = useState({ name: '', email: '', message: '' });
 
-    
+
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -22,7 +22,6 @@ export default function ContactPage() {
             emailProvided: !!formData.email
         });
 
-        alert('Thank you for contacting us! A form_submit event has been sent to analytics.');
         setFormData({ name: '', email: '', message: '' });
     };
 
